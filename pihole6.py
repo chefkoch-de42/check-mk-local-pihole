@@ -115,7 +115,7 @@ days_old = int(round(last_gravity / 86400, 0))
 warning_threshold = 8 * 86400  # 8 days in seconds
 critical_threshold = 15 * 86400  # 15 days in seconds
 
-print(f'P "Pi-Hole Gravity" gravitiy_age={last_gravity};{warning_threshold};{critical_threshold} Pi-Hole Gravity lists were updated ', end='')
+print(f'P "Pi-Hole Gravity" gravity_age={last_gravity};{warning_threshold};{critical_threshold} Pi-Hole Gravity lists were updated ', end='')
 
 if last_gravity < 60:
     time_value, unit = last_gravity, "second"
