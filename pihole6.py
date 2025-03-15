@@ -5,17 +5,23 @@
 
 import requests
 import time
+import json
 
-# Uncomment and set this if you have a password for the Pi-hole UI.
-MP = '0Icu812!'
+# Load credentials from the JSON file
+with open('credentials.json', 'r') as file:
+    credentials = json.load(file)
 
-base_url = "http://localhost/api"
+MP = credentials.get('MP')
+base_url = credentials.get('base_url')
 sid = ""
 
 if 'MP' in globals():
     auth_url = f"{base_url}/auth"
     payload = {"password": MP}
-    headers = {'Content-Type': 'application/json'}
+    headers = {
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+    }
 
     response = requests.post(auth_url, json=payload, headers=headers)
     result = response.json()
@@ -36,6 +42,50 @@ if status_data.get("blocking") == "enabled":
     print('0 "Pi-Hole Status" enabled=1 Pi-Hole ad blocking is enabled')
 else:
     print('1 "Pi-Hole Status" enabled=0 Pi-Hole ad blocking is disabled')
+
+# Get Pi-hole DHCP status
+dhcp_status_url = f"{base_url}/config/dhcp{sid}"
+response = requests.get(dhcp_status_url)
+if not response.ok:
+    raise SystemExit("API returned no data! Check password and access lists!")
+
+dhcp_status_data = response.json()
+
+# Check if DHCP is active
+dhcp_active = 1 if dhcp_status_data["config"]["dhcp"]["active"] else 0
+
+# Extract DHCP info
+start = dhcp_status_data["config"]["dhcp"]["start"]
+end = dhcp_status_data["config"]["dhcp"]["end"]
+router = dhcp_status_data["config"]["dhcp"]["router"]
+
+# Extract lease time
+lease_time = dhcp_status_data["config"]["dhcp"]["leaseTime"]
+
+# Count the number of hosts
+hosts_count = len(dhcp_status_data["config"]["dhcp"]["hosts"])
+
+# Get Pi-hole DHCP leases
+dhcp_leases_url = f"{base_url}/dhcp/leases{sid}"
+response = requests.get(dhcp_leases_url)
+if not response.ok:
+    raise SystemExit("API returned no data! Check password and access lists!")
+
+dhcp_leases_data = response.json()
+
+# Count the number of DHCP leases
+leases_count = len(dhcp_leases_data["leases"])
+
+# Convert lease time to seconds if it is in minutes or hours
+if lease_time.endswith('m'):
+    lease_time_seconds = int(lease_time[:-1]) * 60
+elif lease_time.endswith('h'):
+    lease_time_seconds = int(lease_time[:-1]) * 3600
+else:
+    lease_time_seconds = lease_time
+
+# Print the combined DHCP status with lease time in seconds
+print(f'0 "Pi-Hole DHCP Status" enabled={dhcp_active}|lease_time={lease_time_seconds}|hosts_count={hosts_count}|leases_count={leases_count} start={start} end={end} router={router} lease_time={lease_time_seconds}s hosts_count={hosts_count} leases_count={leases_count} Pi-Hole DHCP Status: Enabled={dhcp_active}, Start={start}, End={end}, Router={router}, Lease Time={lease_time_seconds}s, Hosts Count={hosts_count}, Leases Count={leases_count}')
 
 # Get Pi-hole summary stats
 summary_url = f"{base_url}/stats/summary{sid}"
@@ -60,7 +110,12 @@ print(f'0 "Pi-Hole Summary" {"|".join(metrics.values())} Pi-Hole Statistics Summ
 # Check last gravity update
 last_gravity = int(time.time()) - summary_data["gravity"]["last_update"]
 days_old = int(round(last_gravity / 86400, 0))
-print(f'P "Pi-Hole Gravity" last_update={days_old};8;15 Pi-Hole Gravity lists were updated ', end='')
+
+# Convert thresholds from days to seconds
+warning_threshold = 8 * 86400  # 8 days in seconds
+critical_threshold = 15 * 86400  # 15 days in seconds
+
+print(f'P "Pi-Hole Gravity" gravitiy_age={last_gravity};{warning_threshold};{critical_threshold} Pi-Hole Gravity lists were updated ', end='')
 
 if last_gravity < 60:
     time_value, unit = last_gravity, "second"
