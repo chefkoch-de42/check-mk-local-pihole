@@ -89,6 +89,11 @@ status_code = 0 if dhcp_active == 1 else 2
 
 # Print the combined DHCP status with lease time in seconds
 print(f'{status_code} "Pi-Hole DHCP Status" enabled={dhcp_active}|lease_time={lease_time_seconds}|hosts_count={hosts_count}|leases_count={leases_count} start={start} end={end} router={router} lease_time={lease_time_seconds}s hosts_count={hosts_count} leases_count={leases_count} Pi-Hole DHCP Status: Enabled={dhcp_active}, Start={start}, End={end}, Router={router}, Lease Time={lease_time_seconds}s, Hosts Count={hosts_count}, Leases Count={leases_count}')
+
+# Print the DHCP cluster status if DHCP is enabled
+if dhcp_active == 1:
+    print(f'0 "Pi-Hole DHCP Cluster Status" enabled={dhcp_active} Pi-Hole DHCP Cluster Status: Enabled={dhcp_active}')
+
 # Get Pi-hole summary stats
 summary_url = f"{base_url}/stats/summary{sid}"
 response = requests.get(summary_url)
