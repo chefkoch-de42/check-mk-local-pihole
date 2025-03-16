@@ -8,11 +8,12 @@ import time
 import json
 
 # Load credentials from the JSON file
-with open('credentials.json', 'r') as file:
+with open('pihole-local-credentials.json', 'r') as file:
     credentials = json.load(file)
 
 MP = credentials.get('MP')
 base_url = credentials.get('base_url')
+check_dhcp_status = credentials.get('check_dhcp_status', False)
 sid = ""
 
 if 'MP' in globals():
@@ -43,56 +44,57 @@ if status_data.get("blocking") == "enabled":
 else:
     print('1 "Pi-Hole Status" enabled=0 Pi-Hole ad blocking is disabled')
 
-# Get Pi-hole DHCP status
-dhcp_status_url = f"{base_url}/config/dhcp{sid}"
-response = requests.get(dhcp_status_url)
-if not response.ok:
-    raise SystemExit("API returned no data! Check password and access lists!")
+if check_dhcp_status:
+    # Get Pi-hole DHCP status
+    dhcp_status_url = f"{base_url}/config/dhcp{sid}"
+    response = requests.get(dhcp_status_url)
+    if not response.ok:
+        raise SystemExit("API returned no data! Check password and access lists!")
 
-dhcp_status_data = response.json()
+    dhcp_status_data = response.json()
 
-# Check if DHCP is active
-dhcp_active = 1 if dhcp_status_data["config"]["dhcp"]["active"] else 0
+    # Check if DHCP is active
+    dhcp_active = 1 if dhcp_status_data["config"]["dhcp"]["active"] else 0
 
-# Extract DHCP info
-start = dhcp_status_data["config"]["dhcp"]["start"]
-end = dhcp_status_data["config"]["dhcp"]["end"]
-router = dhcp_status_data["config"]["dhcp"]["router"]
+    # Extract DHCP info
+    start = dhcp_status_data["config"]["dhcp"]["start"]
+    end = dhcp_status_data["config"]["dhcp"]["end"]
+    router = dhcp_status_data["config"]["dhcp"]["router"]
 
-# Extract lease time
-lease_time = dhcp_status_data["config"]["dhcp"]["leaseTime"]
+    # Extract lease time
+    lease_time = dhcp_status_data["config"]["dhcp"]["leaseTime"]
 
-# Count the number of hosts
-hosts_count = len(dhcp_status_data["config"]["dhcp"]["hosts"])
+    # Count the number of hosts
+    hosts_count = len(dhcp_status_data["config"]["dhcp"]["hosts"])
 
-# Get Pi-hole DHCP leases
-dhcp_leases_url = f"{base_url}/dhcp/leases{sid}"
-response = requests.get(dhcp_leases_url)
-if not response.ok:
-    raise SystemExit("API returned no data! Check password and access lists!")
+    # Get Pi-hole DHCP leases
+    dhcp_leases_url = f"{base_url}/dhcp/leases{sid}"
+    response = requests.get(dhcp_leases_url)
+    if not response.ok:
+        raise SystemExit("API returned no data! Check password and access lists!")
 
-dhcp_leases_data = response.json()
+    dhcp_leases_data = response.json()
 
-# Count the number of DHCP leases
-leases_count = len(dhcp_leases_data["leases"])
+    # Count the number of DHCP leases
+    leases_count = len(dhcp_leases_data["leases"])
 
-# Convert lease time to seconds if it is in minutes or hours
-if lease_time.endswith('m'):
-    lease_time_seconds = int(lease_time[:-1]) * 60
-elif lease_time.endswith('h'):
-    lease_time_seconds = int(lease_time[:-1]) * 3600
-else:
-    lease_time_seconds = lease_time
+    # Convert lease time to seconds if it is in minutes or hours
+    if lease_time.endswith('m'):
+        lease_time_seconds = int(lease_time[:-1]) * 60
+    elif lease_time.endswith('h'):
+        lease_time_seconds = int(lease_time[:-1]) * 3600
+    else:
+        lease_time_seconds = lease_time
 
-# Determine the status code based on dhcp_active
-status_code = 0 if dhcp_active == 1 else 2
+    # Determine the status code based on dhcp_active
+    status_code = 0 if dhcp_active == 1 else 2
 
-# Print the combined DHCP status with lease time in seconds
-print(f'{status_code} "Pi-Hole DHCP Status" enabled={dhcp_active}|lease_time={lease_time_seconds}|hosts_count={hosts_count}|leases_count={leases_count} start={start} end={end} router={router} lease_time={lease_time_seconds}s hosts_count={hosts_count} leases_count={leases_count} Pi-Hole DHCP Status: Enabled={dhcp_active}, Start={start}, End={end}, Router={router}, Lease Time={lease_time_seconds}s, Hosts Count={hosts_count}, Leases Count={leases_count}')
+    # Print the combined DHCP status with lease time in seconds
+    print(f'{status_code} "Pi-Hole DHCP Status" enabled={dhcp_active}|lease_time={lease_time_seconds}|hosts_count={hosts_count}|leases_count={leases_count} start={start} end={end} router={router} lease_time={lease_time_seconds}s hosts_count={hosts_count} leases_count={leases_count} Pi-Hole DHCP Status: Enabled={dhcp_active}, Start={start}, End={end}, Router={router}, Lease Time={lease_time_seconds}s, Hosts Count={hosts_count}, Leases Count={leases_count}')
 
-# Print the DHCP cluster status if DHCP is enabled
-if dhcp_active == 1:
-    print(f'0 "Pi-Hole DHCP Cluster Status" enabled={dhcp_active} Pi-Hole DHCP Cluster Status: Enabled={dhcp_active}')
+    # Print the DHCP cluster status if DHCP is enabled
+    if dhcp_active == 1:
+        print(f'0 "Pi-Hole DHCP Cluster Status" enabled={dhcp_active} Pi-Hole DHCP Cluster Status: Enabled={dhcp_active}')
 
 # Get Pi-hole summary stats
 summary_url = f"{base_url}/stats/summary{sid}"

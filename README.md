@@ -14,7 +14,7 @@ A local check for pihole instances running on Linux. There is a special agent in
 
 1. Copy the `pihole6.py` into the agent local checks directory on the Pi-Hole host.
 2. Make sure it is executable (`chmod 700`).
-3. Create a `credentials.json` file in the same directory as `pihole6.py` with the following content:
+3. Create a `pihole-local-credentials.json` file in the same directory as `pihole6.py` with the following content:
     ```json
     {
       "MP": "your_password_here",
